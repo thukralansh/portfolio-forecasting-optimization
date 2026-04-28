@@ -1,0 +1,68 @@
+version: 2.1
+
+parameters:
+  run_live_forecast:
+    type: boolean
+    default: false
+
+executors:
+  python_executor:
+    docker:
+      - image: cimg/python:3.12
+
+commands:
+  install-project:
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-pip-deps-{{ checksum "pyproject.toml" }}
+            - v1-pip-deps-
+      - run:
+          name: Create virtual environment
+          command: python -m venv .venv
+      - run:
+          name: Install project dependencies
+          command: ./.venv/bin/pip install -e ".[dev]"
+      - save_cache:
+          key: v1-pip-deps-{{ checksum "pyproject.toml" }}
+          paths:
+            - .venv
+
+jobs:
+  lint:
+    executor: python_executor
+    steps:
+      - install-project
+      - run:
+          name: Run Ruff
+          command: ./.venv/bin/python -m ruff check src tests
+
+  test:
+    executor: python_executor
+    steps:
+      - install-project
+      - run:
+          name: Run Pytest
+          command: ./.venv/bin/python -m pytest -q
+
+  live-forecast:
+    executor: python_executor
+    steps:
+      - install-project
+      - run:
+          name: Run live portfolio forecast
+          command: ./.venv/bin/python -m portfolio_forecasting.cli
+
+workflows:
+  ci:
+    when:
+      not: << pipeline.parameters.run_live_forecast >>
+    jobs:
+      - lint
+      - test
+
+  scheduled-live-forecast:
+    when: << pipeline.parameters.run_live_forecast >>
+    jobs:
+      - live-forecast
