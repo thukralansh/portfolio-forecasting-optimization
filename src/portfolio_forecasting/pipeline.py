@@ -10,6 +10,20 @@ from .forecasting import forecast_portfolio, forecast_target_date
 from .optimization import optimize_weights
 
 
+def _serialize_historical_prices(histories: dict[str, Any]) -> dict[str, list[dict[str, object]]]:
+    """Convert aligned price histories into JSON-safe records for persistence helpers."""
+    payload: dict[str, list[dict[str, object]]] = {}
+    for ticker, history in histories.items():
+        payload[ticker] = [
+            {
+                "price_date": pd_timestamp.date().isoformat(),
+                "close_price": float(price),
+            }
+            for pd_timestamp, price in history["price"].items()
+        ]
+    return payload
+
+
 def run_pipeline(config: PortfolioConfig) -> dict[str, Any]:
     """Run the local forecasting and optimization workflow."""
     raw_histories = fetch_price_history(config.tickers, start_date=config.start_date)
@@ -41,6 +55,7 @@ def run_pipeline(config: PortfolioConfig) -> dict[str, Any]:
     )
 
     return {
+        "_historical_prices": _serialize_historical_prices(histories),
         "forecast_date": forecast_date.isoformat(),
         "tickers": list(histories),
         "current_prices": current_prices,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from copy import deepcopy
 
 from .config import PortfolioConfig
 from .pipeline import run_pipeline
@@ -18,7 +19,9 @@ def main() -> None:
     result = run_pipeline(PortfolioConfig())
     if save_forecast_results_if_configured(result):
         logger.info("Persisted forecast results to Supabase")
-    print(json.dumps(result, indent=2, sort_keys=True))
+    printable_result = deepcopy(result)
+    printable_result.pop("_historical_prices", None)
+    print(json.dumps(printable_result, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":

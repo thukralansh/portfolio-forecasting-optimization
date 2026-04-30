@@ -46,7 +46,8 @@ python -m portfolio_forecasting.cli
 ```
 
 If `SUPABASE_URL` and `SUPABASE_SECRET_KEY` are set in the environment, the CLI will also
-upsert one row per ticker into the `forecast_results` table.
+upsert one row per ticker into the `forecast_results` table and sync historical daily prices
+into the `asset_price_history` table for richer dashboard visualizations.
 
 ## Customize
 

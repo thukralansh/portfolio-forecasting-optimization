@@ -16,6 +16,7 @@ SUPABASE_URL_ENV = "SUPABASE_URL"
 SUPABASE_SECRET_KEY_ENV = "SUPABASE_SECRET_KEY"
 SUPABASE_LEGACY_KEY_ENV = "SUPABASE_KEY"
 FORECAST_RESULTS_TABLE = "forecast_results"
+ASSET_PRICE_HISTORY_TABLE = "asset_price_history"
 
 
 def resolve_supabase_credentials(optional: bool = False) -> tuple[str, str] | None:
@@ -80,6 +81,25 @@ def build_forecast_rows(
     return rows
 
 
+def build_asset_price_history_rows(result: dict[str, Any]) -> list[dict[str, object]]:
+    """Flatten serialized historical prices into asset_price_history rows."""
+    historical_prices = result.get("_historical_prices")
+    if not historical_prices:
+        raise ValueError("Pipeline result did not include _historical_prices for persistence")
+
+    rows: list[dict[str, object]] = []
+    for ticker, entries in historical_prices.items():
+        for entry in entries:
+            rows.append(
+                {
+                    "ticker": ticker,
+                    "price_date": entry["price_date"],
+                    "close_price": float(entry["close_price"]),
+                }
+            )
+    return rows
+
+
 def save_forecast_results(result: dict[str, Any], client: Client | None = None) -> int:
     """Upsert one forecast row per ticker into Supabase."""
     supabase = client or get_supabase_client(optional=False)
@@ -99,6 +119,21 @@ def save_forecast_results(result: dict[str, Any], client: Client | None = None) 
     return len(rows)
 
 
+def save_asset_price_history(result: dict[str, Any], client: Client | None = None) -> int:
+    """Upsert historical daily prices into Supabase for charting."""
+    supabase = client or get_supabase_client(optional=False)
+    if supabase is None:  # pragma: no cover - guarded by resolve_supabase_credentials()
+        raise ValueError("Supabase client could not be created")
+
+    rows = build_asset_price_history_rows(result)
+    supabase.table(ASSET_PRICE_HISTORY_TABLE).upsert(
+        rows,
+        on_conflict="ticker,price_date",
+    ).execute()
+    logger.info("Saved %s historical price rows to Supabase", len(rows))
+    return len(rows)
+
+
 def save_forecast_results_if_configured(result: dict[str, Any]) -> bool:
     """Persist results only when Supabase credentials are present."""
     supabase = get_supabase_client(optional=True)
@@ -107,4 +142,5 @@ def save_forecast_results_if_configured(result: dict[str, Any]) -> bool:
         return False
 
     save_forecast_results(result, client=supabase)
+    save_asset_price_history(result, client=supabase)
     return True
