@@ -7,7 +7,10 @@ A clean-room implementation of a portfolio research workflow that:
 - converts those forecasts into expected returns, and
 - solves a constrained mean-variance allocation problem.
 
-This version is intentionally focused on the core local workflow first. It does not depend on hosted dashboards or database infrastructure.
+This version now includes:
+
+- a scheduled forecasting pipeline that writes to Supabase, and
+- a Streamlit dashboard that reads from Supabase using a publishable key plus RLS policies.
 
 ## What It Does
 
@@ -28,6 +31,8 @@ src/portfolio_forecasting/
   optimization.py
   pipeline.py
   cli.py
+  dashboard_data.py
+  dashboard.py
 tests/
 ```
 
@@ -48,6 +53,41 @@ python -m portfolio_forecasting.cli
 If `SUPABASE_URL` and `SUPABASE_SECRET_KEY` are set in the environment, the CLI will also
 upsert one row per ticker into the `forecast_results` table and sync historical daily prices
 into the `asset_price_history` table for richer dashboard visualizations.
+
+## Dashboard
+
+The Streamlit dashboard reads from Supabase using:
+
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+
+Run it locally with:
+
+```bash
+make dashboard
+```
+
+### Supabase read policies
+
+Because the dashboard uses a publishable key, both tables need `SELECT` policies for the
+`anon` role. In Supabase SQL Editor, run:
+
+```sql
+create policy "public read forecast results"
+on public.forecast_results
+for select
+to anon
+using (true);
+
+create policy "public read asset price history"
+on public.asset_price_history
+for select
+to anon
+using (true);
+```
+
+If you also want authenticated users to read through the same path, add matching `to authenticated`
+policies as well.
 
 ## Customize
 

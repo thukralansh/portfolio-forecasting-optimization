@@ -1,4 +1,4 @@
-.PHONY: install install-dev lint test run clean
+.PHONY: install install-dev lint test run dashboard clean
 
 PYTHON := ./.venv/bin/python
 PIP := ./.venv/bin/pip
@@ -19,6 +19,9 @@ test:
 
 run:
 	$(PYTHON) -m portfolio_forecasting.cli
+
+dashboard:
+	$(PYTHON) -m streamlit run src/portfolio_forecasting/dashboard.py
 
 clean:
 	find . -type d -name "__pycache__" -prune -exec rm -rf {} +
