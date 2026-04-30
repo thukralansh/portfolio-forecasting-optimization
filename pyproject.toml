@@ -13,6 +13,7 @@ dependencies = [
   "pandas>=2.0",
   "prophet>=1.1.5",
   "scipy>=1.11",
+  "supabase>=2.23.0",
   "yfinance>=0.2.28",
 ]
 

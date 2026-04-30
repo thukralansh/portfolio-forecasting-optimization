@@ -6,7 +6,7 @@ from typing import Any
 
 from .config import PortfolioConfig
 from .data import align_histories, fetch_price_history
-from .forecasting import forecast_portfolio
+from .forecasting import forecast_portfolio, forecast_target_date
 from .optimization import optimize_weights
 
 
@@ -34,8 +34,14 @@ def run_pipeline(config: PortfolioConfig) -> dict[str, Any]:
         ticker: float(history["price"].iloc[-1])
         for ticker, history in histories.items()
     }
+    reference_history = next(iter(histories.values()))
+    forecast_date = forecast_target_date(
+        reference_history["price"],
+        horizon_days=config.forecast_horizon_days,
+    )
 
     return {
+        "forecast_date": forecast_date.isoformat(),
         "tickers": list(histories),
         "current_prices": current_prices,
         "predictions": predictions,

@@ -45,6 +45,9 @@ pip install -e ".[dev]"
 python -m portfolio_forecasting.cli
 ```
 
+If `SUPABASE_URL` and `SUPABASE_SECRET_KEY` are set in the environment, the CLI will also
+upsert one row per ticker into the `forecast_results` table.
+
 ## Customize
 
 Edit the defaults in `src/portfolio_forecasting/config.py` to change:

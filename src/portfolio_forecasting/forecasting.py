@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import date
 
 import pandas as pd
 from prophet import Prophet
@@ -13,6 +14,20 @@ logger = logging.getLogger(__name__)
 def _build_prophet_frame(price_series: pd.Series) -> pd.DataFrame:
     """Convert a price series into Prophet's expected schema."""
     return pd.DataFrame({"ds": pd.to_datetime(price_series.index), "y": price_series.values})
+
+
+def _future_business_dates(price_series: pd.Series, horizon_days: int) -> pd.DatetimeIndex:
+    """Return the future business dates Prophet should forecast for."""
+    if price_series.empty:
+        raise ValueError("price_series must not be empty")
+
+    last_date = pd.to_datetime(price_series.index[-1])
+    return pd.bdate_range(start=last_date, periods=horizon_days + 1)[1:]
+
+
+def forecast_target_date(price_series: pd.Series, horizon_days: int = 1) -> date:
+    """Return the business date being forecast for."""
+    return _future_business_dates(price_series, horizon_days=horizon_days)[-1].date()
 
 
 def forecast_next_price(price_series: pd.Series, horizon_days: int = 1) -> float:
@@ -27,8 +42,7 @@ def forecast_next_price(price_series: pd.Series, horizon_days: int = 1) -> float
     )
     model.fit(_build_prophet_frame(price_series))
 
-    last_date = pd.to_datetime(price_series.index[-1])
-    future_dates = pd.bdate_range(start=last_date, periods=horizon_days + 1)[1:]
+    future_dates = _future_business_dates(price_series, horizon_days=horizon_days)
     forecast = model.predict(pd.DataFrame({"ds": future_dates}))
     return float(forecast["yhat"].iloc[-1])
 
