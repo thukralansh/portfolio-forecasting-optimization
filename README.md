@@ -67,6 +67,22 @@ Run it locally with:
 make dashboard
 ```
 
+If you don't want to export these values in every new shell, create:
+
+```text
+.streamlit/secrets.toml
+```
+
+using:
+
+```toml
+SUPABASE_URL = "https://jbbjnrwwwretjnhwsbyk.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "your_publishable_key_here"
+```
+
+The dashboard checks normal environment variables first and then falls back to Streamlit
+secrets.
+
 ### Supabase read policies
 
 Because the dashboard uses a publishable key, both tables need `SELECT` policies for the

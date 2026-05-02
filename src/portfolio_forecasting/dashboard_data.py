@@ -6,6 +6,7 @@ import os
 from collections.abc import Callable
 
 import pandas as pd
+import streamlit as st
 from supabase import Client, create_client
 
 from portfolio_forecasting.storage import SUPABASE_URL_ENV
@@ -16,8 +17,10 @@ SUPABASE_PAGE_SIZE = 1000
 
 def get_dashboard_supabase_client() -> Client:
     """Create a low-privilege Supabase client for the dashboard."""
-    url = os.getenv(SUPABASE_URL_ENV)
-    publishable_key = os.getenv(SUPABASE_PUBLISHABLE_KEY_ENV)
+    url = os.getenv(SUPABASE_URL_ENV) or st.secrets.get(SUPABASE_URL_ENV)
+    publishable_key = os.getenv(SUPABASE_PUBLISHABLE_KEY_ENV) or st.secrets.get(
+        SUPABASE_PUBLISHABLE_KEY_ENV
+    )
     if not url or not publishable_key:
         raise ValueError(
             "Dashboard access requires SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY."
