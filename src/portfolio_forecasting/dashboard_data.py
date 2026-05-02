@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 
 import pandas as pd
 from supabase import Client, create_client
@@ -10,6 +11,7 @@ from supabase import Client, create_client
 from portfolio_forecasting.storage import SUPABASE_URL_ENV
 
 SUPABASE_PUBLISHABLE_KEY_ENV = "SUPABASE_PUBLISHABLE_KEY"
+SUPABASE_PAGE_SIZE = 1000
 
 
 def get_dashboard_supabase_client() -> Client:
@@ -23,17 +25,37 @@ def get_dashboard_supabase_client() -> Client:
     return create_client(url, publishable_key)
 
 
+def _fetch_all_rows(
+    query_factory: Callable[[int, int], object],
+    page_size: int = SUPABASE_PAGE_SIZE,
+) -> list[dict[str, object]]:
+    """Collect every row from a paginated Supabase query."""
+    start = 0
+    rows: list[dict[str, object]] = []
+
+    while True:
+        response = query_factory(start, start + page_size - 1).execute()
+        data = getattr(response, "data", None) or []
+        rows.extend(data)
+        if len(data) < page_size:
+            break
+        start += page_size
+
+    return rows
+
+
 def load_forecast_results(client: Client | None = None) -> pd.DataFrame:
     """Load all forecast snapshots from Supabase."""
     supabase = client or get_dashboard_supabase_client()
-    response = (
-        supabase.table("forecast_results")
-        .select("*")
-        .order("forecast_date", desc=False)
-        .order("ticker", desc=False)
-        .execute()
+    data = _fetch_all_rows(
+        lambda start, end: (
+            supabase.table("forecast_results")
+            .select("*")
+            .order("forecast_date", desc=False)
+            .order("ticker", desc=False)
+            .range(start, end)
+        )
     )
-    data = getattr(response, "data", None)
     if not data:
         return pd.DataFrame()
 
@@ -49,14 +71,15 @@ def load_forecast_results(client: Client | None = None) -> pd.DataFrame:
 def load_asset_price_history(client: Client | None = None) -> pd.DataFrame:
     """Load historical daily close prices from Supabase."""
     supabase = client or get_dashboard_supabase_client()
-    response = (
-        supabase.table("asset_price_history")
-        .select("*")
-        .order("price_date", desc=False)
-        .order("ticker", desc=False)
-        .execute()
+    data = _fetch_all_rows(
+        lambda start, end: (
+            supabase.table("asset_price_history")
+            .select("*")
+            .order("price_date", desc=False)
+            .order("ticker", desc=False)
+            .range(start, end)
+        )
     )
-    data = getattr(response, "data", None)
     if not data:
         return pd.DataFrame()
 
