@@ -21,7 +21,7 @@ run:
 	$(PYTHON) -m portfolio_forecasting.cli
 
 dashboard:
-	$(PYTHON) -m streamlit run src/portfolio_forecasting/dashboard.py
+	$(PYTHON) -m streamlit run streamlit_app.py
 
 clean:
 	find . -type d -name "__pycache__" -prune -exec rm -rf {} +

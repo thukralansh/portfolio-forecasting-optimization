@@ -7,6 +7,7 @@ from datetime import date, timedelta
 import altair as alt
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from portfolio_forecasting.dashboard_data import (
@@ -24,28 +25,114 @@ def _inject_styles() -> None:
         """
         <style>
           .stApp {
+            color: #10243a;
             background:
               radial-gradient(circle at top left, rgba(13, 110, 253, 0.10), transparent 30%),
               radial-gradient(circle at top right, rgba(25, 135, 84, 0.10), transparent 24%),
               linear-gradient(180deg, #f7f9fc 0%, #eef3f9 100%);
           }
+          .stApp [data-testid="stAppViewContainer"] {
+            background: transparent;
+          }
+          .block-container {
+            max-width: 1200px;
+            padding-top: 2rem;
+            padding-bottom: 3rem;
+          }
+          .stMarkdown, .stCaption, label, p, span, div {
+            color: #10243a;
+          }
           .hero {
             padding: 1.4rem 1.6rem;
             border-radius: 18px;
-            background: linear-gradient(135deg, #0b2239 0%, #12395d 45%, #2b6f9f 100%);
-            color: white;
-            box-shadow: 0 18px 40px rgba(17, 35, 57, 0.18);
+            background: linear-gradient(135deg, #ffffff 0%, #eaf2ff 55%, #dbeafe 100%);
+            color: #10243a;
+            border: 1px solid rgba(17, 35, 57, 0.08);
+            box-shadow: 0 18px 40px rgba(17, 35, 57, 0.10);
             margin-bottom: 1rem;
           }
           .hero h1 {
             margin: 0;
             font-size: 2.1rem;
             letter-spacing: -0.03em;
+            color: #10243a;
           }
           .hero p {
             margin: 0.4rem 0 0;
-            color: rgba(255,255,255,0.85);
+            color: #4f647c;
             font-size: 1rem;
+          }
+          div[data-testid="stSelectbox"] label,
+          div[data-testid="stSlider"] label,
+          div[data-testid="stMetricLabel"] p,
+          div[data-testid="stMarkdownContainer"] p {
+            color: #4f647c !important;
+          }
+          div[data-testid="stMetric"] {
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid rgba(17, 35, 57, 0.08);
+            border-radius: 18px;
+            padding: 1rem 1.05rem;
+            box-shadow: 0 10px 28px rgba(14, 32, 53, 0.08);
+          }
+          div[data-testid="stMetricLabel"] {
+            color: #5b7088;
+            font-weight: 600;
+          }
+          div[data-testid="stMetricValue"] {
+            color: #10243a;
+            font-weight: 800;
+          }
+          h3, .stSubheader {
+            color: #12395d;
+            letter-spacing: -0.02em;
+          }
+          div[data-baseweb="select"] > div,
+          div[data-baseweb="input"] > div,
+          div[data-testid="stDateInputField"] > div,
+          div[data-testid="stNumberInput"] input {
+            background: rgba(255, 255, 255, 0.92);
+            color: #10243a;
+            border-radius: 14px;
+            border: 1px solid rgba(17, 35, 57, 0.12);
+            box-shadow: 0 8px 24px rgba(14, 32, 53, 0.06);
+          }
+          div[data-baseweb="select"] * {
+            color: #10243a !important;
+          }
+          div[data-baseweb="popover"] *,
+          ul[role="listbox"] *,
+          li[role="option"] * {
+            color: #10243a !important;
+            background: white !important;
+          }
+          .stButton button {
+            border-radius: 14px;
+            border: 1px solid rgba(17, 35, 57, 0.10);
+            background: linear-gradient(135deg, #ffffff 0%, #eef4ff 100%);
+            color: #12395d;
+            font-weight: 700;
+            box-shadow: 0 10px 24px rgba(13, 110, 253, 0.10);
+          }
+          .stButton button:hover {
+            background: linear-gradient(135deg, #f8fbff 0%, #dde9ff 100%);
+            color: #0b5ed7;
+            border: 1px solid rgba(13, 110, 253, 0.22);
+          }
+          div[data-testid="stDataFrame"],
+          div[data-testid="stPlotlyChart"],
+          div[data-testid="stVegaLiteChart"] {
+            background: rgba(255, 255, 255, 0.88);
+            border: 1px solid rgba(17, 35, 57, 0.08);
+            border-radius: 18px;
+            padding: 0.35rem;
+            box-shadow: 0 12px 28px rgba(14, 32, 53, 0.08);
+          }
+          div[data-testid="stAlert"] {
+            border-radius: 16px;
+          }
+          div[data-testid="stDataFrame"] div[role="table"] {
+            color: #10243a;
           }
         </style>
         """,
@@ -90,7 +177,14 @@ def _weights_chart(run_df: pd.DataFrame):
         color_discrete_sequence=["#0d6efd", "#198754", "#fd7e14", "#dc3545", "#6f42c1", "#20c997"],
     )
     fig.update_traces(textinfo="label+percent", hovertemplate="%{label}: %{value:.2%}")
-    fig.update_layout(showlegend=True, legend_title_text="Ticker", height=360)
+    fig.update_layout(
+        showlegend=True,
+        legend_title_text="Ticker",
+        height=360,
+        paper_bgcolor="rgba(255,255,255,0)",
+        plot_bgcolor="rgba(255,255,255,0)",
+        font={"color": "#10243a"},
+    )
     return fig
 
 
@@ -100,7 +194,16 @@ def _ticker_history_chart(
     actual_prices: pd.DataFrame,
     window_days: int,
 ):
-    cutoff = date.today() - timedelta(days=window_days)
+    ticker_actuals = actual_prices[actual_prices["ticker"] == ticker].copy()
+    ticker_forecasts = forecasts[forecasts["ticker"] == ticker].copy()
+    if ticker_actuals.empty and ticker_forecasts.empty:
+        return None
+
+    latest_actual = ticker_actuals["price_date"].max() if not ticker_actuals.empty else None
+    latest_forecast = ticker_forecasts["forecast_date"].max() if not ticker_forecasts.empty else None
+    latest_date = max(value for value in [latest_actual, latest_forecast] if value is not None)
+    cutoff = latest_date - timedelta(days=window_days)
+
     actual_df = actual_prices[
         (actual_prices["ticker"] == ticker) & (actual_prices["price_date"] >= cutoff)
     ].copy()
@@ -111,31 +214,76 @@ def _ticker_history_chart(
     if actual_df.empty and forecast_df.empty:
         return None
 
-    actual_chart = (
-        alt.Chart(actual_df)
-        .mark_line(color="#0d6efd", strokeWidth=2.5)
-        .encode(
-            x=alt.X("price_date:T", title="Date"),
-            y=alt.Y("close_price:Q", title="Price (USD)"),
-            tooltip=[
-                alt.Tooltip("price_date:T", title="Date"),
-                alt.Tooltip("close_price:Q", title="Actual Close", format=".2f"),
-            ],
+    values = []
+    if not actual_df.empty:
+        values.extend(actual_df["close_price"].dropna().tolist())
+    if not forecast_df.empty:
+        values.extend(forecast_df["predicted_price"].dropna().tolist())
+    if not values:
+        return None
+
+    min_value = min(values)
+    max_value = max(values)
+    padding = max((max_value - min_value) * 0.18, max_value * 0.03, 1.0)
+    y_min = max(0.0, min_value - padding)
+    y_max = max_value + padding
+
+    figure = go.Figure()
+    if not actual_df.empty:
+        figure.add_trace(
+            go.Scatter(
+                x=pd.to_datetime(actual_df["price_date"]),
+                y=actual_df["close_price"],
+                mode="lines",
+                name="Actual Close",
+                line={"color": "#0d6efd", "width": 3},
+                hovertemplate="Date=%{x|%Y-%m-%d}<br>Actual Close=$%{y:.2f}<extra></extra>",
+            )
         )
-    )
-    forecast_chart = (
-        alt.Chart(forecast_df)
-        .mark_line(color="#fd7e14", point=True, strokeDash=[6, 4], strokeWidth=2.5)
-        .encode(
-            x=alt.X("forecast_date:T", title="Date"),
-            y=alt.Y("predicted_price:Q", title="Price (USD)"),
-            tooltip=[
-                alt.Tooltip("forecast_date:T", title="Forecast Date"),
-                alt.Tooltip("predicted_price:Q", title="Predicted Price", format=".2f"),
-            ],
+    if not forecast_df.empty:
+        figure.add_trace(
+            go.Scatter(
+                x=pd.to_datetime(forecast_df["forecast_date"]),
+                y=forecast_df["predicted_price"],
+                mode="lines+markers",
+                name="Predicted Close",
+                line={"color": "#fd7e14", "width": 3, "dash": "dash"},
+                marker={"size": 8, "color": "#fd7e14"},
+                hovertemplate="Forecast Date=%{x|%Y-%m-%d}<br>Predicted=$%{y:.2f}<extra></extra>",
+            )
         )
+
+    figure.update_layout(
+        height=460,
+        paper_bgcolor="rgba(255,255,255,0)",
+        plot_bgcolor="#ffffff",
+        margin={"l": 18, "r": 18, "t": 18, "b": 18},
+        font={"color": "#10243a", "family": "Inter, sans-serif"},
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "right",
+            "x": 1,
+            "bgcolor": "rgba(255,255,255,0.7)",
+        },
     )
-    return alt.layer(actual_chart, forecast_chart).resolve_scale(y="shared")
+    figure.update_xaxes(
+        title="Date",
+        showgrid=True,
+        gridcolor="#e2e8f0",
+        zeroline=False,
+        linecolor="#b8c6d8",
+    )
+    figure.update_yaxes(
+        title="Price (USD)",
+        range=[y_min, y_max],
+        showgrid=True,
+        gridcolor="#e2e8f0",
+        zeroline=False,
+        linecolor="#b8c6d8",
+    )
+    return figure
 
 
 def run_dashboard() -> None:
@@ -229,7 +377,7 @@ def run_dashboard() -> None:
     if history_chart is None:
         st.info("Not enough data yet to chart this ticker.")
     else:
-        st.altair_chart(history_chart, use_container_width=True)
+        st.plotly_chart(history_chart, use_container_width=True)
         st.caption(
             "Blue line shows actual closes from asset_price_history. Orange line shows forecasted closes by forecast date."
         )
@@ -253,6 +401,8 @@ def run_dashboard() -> None:
                     alt.Tooltip("error_pct:Q", title="Error %", format=".2%"),
                 ],
             )
+            .configure_axis(labelColor="#10243a", titleColor="#12395d", gridColor="#d9e4f0")
+            .configure_view(strokeOpacity=0)
         )
         st.altair_chart(accuracy_chart, use_container_width=True)
         st.dataframe(

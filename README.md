@@ -67,6 +67,14 @@ Run it locally with:
 make dashboard
 ```
 
+For Streamlit Community Cloud, point the app entry file at:
+
+```text
+streamlit_app.py
+```
+
+This avoids relying on editable package installation in the hosted environment.
+
 If you don't want to export these values in every new shell, create:
 
 ```text
