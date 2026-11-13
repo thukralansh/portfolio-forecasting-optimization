@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -45,7 +45,7 @@ def test_build_forecast_rows_returns_one_row_per_ticker() -> None:
     rows = build_forecast_rows(
         result,
         run_id="1234",
-        run_at=datetime(2026, 4, 29, 12, 0, tzinfo=timezone.utc),
+        run_at=datetime(2026, 4, 29, 12, 0, tzinfo=UTC),
     )
 
     assert len(rows) == 2

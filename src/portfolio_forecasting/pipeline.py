@@ -30,6 +30,12 @@ def run_pipeline(config: PortfolioConfig) -> dict[str, Any]:
     histories = align_histories(raw_histories)
     if not histories:
         raise ValueError("No aligned historical data available for the selected tickers")
+    missing = set(config.tickers) - set(histories)
+    if missing:
+        raise ValueError(
+            "Cannot allocate to every configured stock; missing price history: "
+            + ", ".join(sorted(missing))
+        )
 
     predictions, expected_returns = forecast_portfolio(
         histories,

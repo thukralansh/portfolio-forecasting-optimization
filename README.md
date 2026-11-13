@@ -16,7 +16,7 @@ This version now includes:
 
 The pipeline runs in four stages:
 
-1. Fetch adjusted close prices for a list of tickers.
+1. Fetch unadjusted daily close prices for a list of tickers.
 2. Align historical returns across the portfolio universe.
 3. Fit a separate Prophet model per asset and estimate one-step-ahead returns.
 4. Optimize portfolio weights using a long-only mean-variance objective.
@@ -88,8 +88,26 @@ SUPABASE_URL = "https://jbbjnrwwwretjnhwsbyk.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "your_publishable_key_here"
 ```
 
-The dashboard checks normal environment variables first and then falls back to Streamlit
-secrets.
+The dashboard checks Streamlit secrets first and then falls back to environment variables.
+Keep `.streamlit/secrets.toml` local; it is excluded from Git.
+
+### Allocation and evaluation
+
+New pipeline runs allocate at least 5% and at most 45% to each available stock, with
+weights summing to 100%. The objective maximizes expected return minus a covariance-based
+risk penalty. A strong forecast can still reach the 45% cap; this is not a proportional
+return-ranking rule. Historical stored allocations are not rewritten.
+
+The dashboard displays decimal fractions as percentages (0.45 becomes 45%). Evaluation
+matches each forecast to the actual close for the same ticker and target date, within
+the selected ticker/date window. Signed error is `predicted - actual`; percentage error
+divides by the actual close. Positive means overprediction. MAE, RMSE and MAPE exclude
+targets without valid actual closes. A last-reference-close baseline is compared on the
+same evaluated targets. These retrospective diagnostics are not a trading backtest.
+
+Forecasts are independent target-date markers rather than a connected simulated price
+path. Targets use business days, not an exchange holiday calendar. No schema changes or
+additional database permissions are required for this dashboard.
 
 ### Supabase read policies
 

@@ -31,6 +31,11 @@ def optimize_weights(
     tickers = list(expected_returns)
     if not tickers:
         raise ValueError("expected_returns must not be empty")
+    asset_count = len(tickers)
+    if not (0 <= min_weight <= max_weight <= 1) or (
+        asset_count * min_weight > 1 or asset_count * max_weight < 1
+    ):
+        raise ValueError("Allocation bounds are infeasible for the available stocks")
 
     return_matrix = build_return_matrix(histories, lookback_days=lookback_days)
     if return_matrix.empty:
@@ -38,7 +43,6 @@ def optimize_weights(
 
     mu = np.array([expected_returns[ticker] for ticker in tickers], dtype=float)
     covariance = return_matrix[tickers].cov().to_numpy(dtype=float)
-    asset_count = len(tickers)
 
     def objective(weights: np.ndarray) -> float:
         portfolio_return = float(weights @ mu)

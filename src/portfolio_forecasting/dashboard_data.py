@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 from supabase import Client, create_client
@@ -22,9 +23,7 @@ def get_dashboard_supabase_client() -> Client:
         SUPABASE_PUBLISHABLE_KEY_ENV
     )
     if not url or not publishable_key:
-        raise ValueError(
-            "Dashboard access requires SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY."
-        )
+        raise ValueError("Dashboard access requires SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY.")
     return create_client(url, publishable_key)
 
 
@@ -108,11 +107,23 @@ def compute_prediction_accuracy(
         on=["ticker", "forecast_date"],
         how="left",
     )
-    merged = merged.dropna(subset=["actual_close_price"]).copy()
+    merged = merged.dropna(subset=["actual_close_price", "predicted_price"]).copy()
+    merged = merged[
+        np.isfinite(merged[["actual_close_price", "predicted_price"]]).all(axis=1)
+    ].copy()
+    merged = merged[(merged["actual_close_price"] > 0) & (merged["predicted_price"] > 0)].copy()
     if merged.empty:
         return merged
 
-    merged["error"] = merged["actual_close_price"] - merged["predicted_price"]
+    merged["error"] = merged["predicted_price"] - merged["actual_close_price"]
     merged["absolute_error"] = merged["error"].abs()
-    merged["error_pct"] = merged["error"] / merged["predicted_price"]
+    merged["error_pct"] = merged["error"] / merged["actual_close_price"]
+    merged["absolute_error_pct"] = merged["error_pct"].abs()
+    merged["baseline_absolute_error"] = float("nan")
+    if "current_price" in merged:
+        merged["baseline_absolute_error"] = (
+            merged["current_price"] - merged["actual_close_price"]
+        ).abs()
+        valid_reference = np.isfinite(merged["current_price"]) & (merged["current_price"] > 0)
+        merged.loc[~valid_reference, "baseline_absolute_error"] = float("nan")
     return merged.sort_values(["ticker", "forecast_date"]).reset_index(drop=True)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -61,7 +61,7 @@ def build_forecast_rows(
     weights = result["weights"]
 
     resolved_run_id = run_id or str(uuid4())
-    resolved_run_at = (run_at or datetime.now(timezone.utc)).isoformat()
+    resolved_run_at = (run_at or datetime.now(UTC)).isoformat()
 
     rows: list[dict[str, object]] = []
     for ticker in tickers:
