@@ -5,8 +5,8 @@ from __future__ import annotations
 import os
 from collections.abc import Callable
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import streamlit as st
 from supabase import Client, create_client
 

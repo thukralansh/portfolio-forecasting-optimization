@@ -4,7 +4,6 @@ import pandas as pd
 import pytest
 
 from portfolio_forecasting.config import PortfolioConfig
-
 from portfolio_forecasting.optimization import build_return_matrix, optimize_weights
 
 

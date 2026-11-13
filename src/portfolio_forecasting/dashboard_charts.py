@@ -35,8 +35,7 @@ def allocation_chart(snapshot: pd.DataFrame) -> go.Figure:
             values=ordered["weight"],
             hole=0.58,
             sort=False,
-            textinfo="label+percent",
-            textposition="outside",
+            textinfo="none",
             marker={
                 "colors": [ACCENT, BLUE, AMBER, "#d78eab", "#5ac4ad", "#b5a4ee"],
                 "line": {"color": SURFACE, "width": 3},
@@ -48,16 +47,8 @@ def allocation_chart(snapshot: pd.DataFrame) -> go.Figure:
     )
     _style(figure, 330)
     figure.update_layout(
-        showlegend=False,
-        annotations=[
-            {
-                "text": "ALLOCATION",
-                "x": 0.5,
-                "y": 0.5,
-                "showarrow": False,
-                "font": {"size": 12, "color": MUTED},
-            }
-        ],
+        showlegend=True,
+        legend={"orientation": "h", "y": -0.05, "x": 0.5, "xanchor": "center"},
     )
     return figure
 

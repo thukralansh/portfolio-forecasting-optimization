@@ -33,8 +33,8 @@ def fetch_price_history(
     for ticker in tickers:
         try:
             history = yf.Ticker(ticker).history(start=start_date, auto_adjust=False)
-        except Exception as exc:  # pragma: no cover - network/provider errors are not deterministic
-            logger.warning("Failed to fetch %s: %s", ticker, exc)
+        except Exception:
+            logger.exception("Failed to fetch price history for %s", ticker)
             continue
 
         prepared = _prepare_history(history)

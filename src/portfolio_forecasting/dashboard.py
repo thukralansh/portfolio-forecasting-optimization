@@ -14,7 +14,7 @@ from portfolio_forecasting.dashboard_data import (
     load_forecast_results,
 )
 
-st.set_page_config(page_title="Portfolio | Forecast research", layout="wide")
+st.set_page_config(page_title="Portfolio Forecasts", layout="wide")
 
 
 def _inject_styles() -> None:
@@ -175,17 +175,16 @@ def run_dashboard() -> None:
     st.markdown(
         '<nav class="top-nav" aria-label="Main navigation">'
         '<span class="nav-brand">PORTFOLIO LAB</span><div class="nav-links">'
-        '<a href="#a-clearer-view-of-whats-next" target="_self">Overview</a>'
+        '<a href="#portfolio-forecasts" target="_self">Overview</a>'
         '<a href="#forecast-evaluation" target="_self">Evaluation</a>'
         '<a href="https://ansthukral.com" target="_blank" rel="noopener noreferrer">'
         "My website</a></div></nav>",
         unsafe_allow_html=True,
     )
     st.markdown('<div class="eyebrow">PORTFOLIO / RESEARCH TERMINAL</div>', unsafe_allow_html=True)
-    st.title("A clearer view of what's next.")
+    st.title("Portfolio Forecasts")
     st.markdown(
-        '<div class="deck">Daily price forecasts, risk-aware allocations, and an honest '
-        "look at how predictions compare with reality.</div>",
+        '<div class="deck">Price forecasts, portfolio allocation, and model performance.</div>',
         unsafe_allow_html=True,
     )
     forecasts, prices, accuracy = load_dashboard_frames()

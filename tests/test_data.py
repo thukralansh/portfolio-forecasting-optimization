@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from portfolio_forecasting.data import align_histories
+from portfolio_forecasting.data import align_histories, fetch_price_history
 
 
 def test_align_histories_intersects_dates() -> None:
@@ -19,3 +19,14 @@ def test_align_histories_intersects_dates() -> None:
 
     assert list(aligned["AAA"].index) == [pd.Timestamp("2024-01-03")]
     assert list(aligned["BBB"].index) == [pd.Timestamp("2024-01-03")]
+
+
+def test_provider_failure_is_logged_with_traceback(monkeypatch, caplog):
+    def unavailable(ticker):
+        raise RuntimeError("provider unavailable")
+
+    monkeypatch.setattr("portfolio_forecasting.data.yf.Ticker", unavailable)
+    assert fetch_price_history(["AAA"], "2020-01-01") == {}
+    record = next(record for record in caplog.records if "AAA" in record.message)
+    assert record.exc_info is not None
+    assert "provider unavailable" in caplog.text

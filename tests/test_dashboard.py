@@ -57,6 +57,9 @@ def test_charts_show_actual_points_forecast_markers_and_symmetric_error_scale():
     pie = allocation_chart(forecasts.iloc[:2])
     assert pie.data[0].type == "pie"
     assert list(pie.data[0].values) == [0.45, 0.55]
+    assert pie.data[0].textinfo == "none"
+    assert not pie.layout.annotations
+    assert pie.layout.showlegend
 
 
 def test_dashboard_renders_and_filters_ticker_date_and_percentages():
@@ -65,6 +68,7 @@ def test_dashboard_renders_and_filters_ticker_date_and_percentages():
             "from portfolio_forecasting.dashboard import run_dashboard\nrun_dashboard()"
         ).run(timeout=20)
         assert not app.exception
+        assert app.title[0].value == "Portfolio Forecasts"
         assert app.selectbox(key="ticker").value == "AAA"
         assert app.metric[3].value == "45.00%"
         assert app.metric[7].value == "10.00%"
