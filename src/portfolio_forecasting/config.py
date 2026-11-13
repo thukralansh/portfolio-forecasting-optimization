@@ -15,6 +15,6 @@ class PortfolioConfig:
     start_date: str = "2020-01-01"
     lookback_days: int = 252
     forecast_horizon_days: int = 1
-    min_weight: float = 0.0
+    min_weight: float = 0.05
     max_weight: float = 0.45
     risk_aversion: float = 5.0

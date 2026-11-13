@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
+
+from portfolio_forecasting.config import PortfolioConfig
 
 from portfolio_forecasting.optimization import build_return_matrix, optimize_weights
 
@@ -35,3 +38,33 @@ def test_optimize_weights_returns_normalized_allocations() -> None:
 
     assert set(weights) == {"AAA", "BBB"}
     assert abs(sum(weights.values()) - 1.0) < 1e-6
+
+
+def test_default_floor_and_reallocation_follow_expected_returns():
+    config = PortfolioConfig()
+    assert config.min_weight == 0.05
+    history = pd.DataFrame({"return": [0.01, -0.01, 0.005, -0.005]})
+    tickers = config.tickers
+
+    def allocate(preferred):
+        return optimize_weights(
+            {ticker: history for ticker in tickers},
+            {ticker: 0.10 if ticker == preferred else 0.0 for ticker in tickers},
+            4,
+            config.min_weight,
+            config.max_weight,
+            config.risk_aversion,
+        )
+
+    first, second = allocate(tickers[0]), allocate(tickers[1])
+    for weights in (first, second):
+        assert sum(weights.values()) == pytest.approx(1.0)
+        assert all(0.05 - 1e-8 <= weight <= 0.45 + 1e-8 for weight in weights.values())
+    assert first[tickers[0]] > second[tickers[0]]
+    assert second[tickers[1]] > first[tickers[1]]
+
+
+def test_optimizer_rejects_infeasible_bounds():
+    history = pd.DataFrame({"return": [0.01, -0.01, 0.02]})
+    with pytest.raises(ValueError, match="infeasible"):
+        optimize_weights({"AAA": history}, {"AAA": 0.01}, 3, 0.05, 0.45, 5.0)
